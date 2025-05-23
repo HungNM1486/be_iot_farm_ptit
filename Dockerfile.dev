@@ -1,0 +1,33 @@
+FROM node:18-bullseye
+
+# Cài đặt các phụ thuộc cho TensorFlow.js và sharp
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    libpixman-1-dev \
+    libcurl4-openssl-dev \
+    libpng-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Sao chép package.json trước
+COPY package*.json ./
+RUN npm install
+
+# Cài nodemon cho phát triển
+RUN npm install -g nodemon ts-node
+
+# Tạo thư mục cần thiết
+RUN mkdir -p temp uploads tfjs_model
+RUN chmod 755 temp uploads tfjs_model
+
+# Expose cổng
+EXPOSE 3000
+
+# Lệnh khởi động cho development - watch mode để auto refresh
+CMD ["npm", "run", "dev"]

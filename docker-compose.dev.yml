@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: smart-agriculture-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Ánh xạ thư mục src để code thay đổi được cập nhật ngay lập tức
+      - ./src:/app/src
+      - ./uploads:/app/uploads
+      - ./temp:/app/temp
+      - ./tfjs_model:/app/tfjs_model
+      # Tránh ánh xạ node_modules từ máy host
+      - /app/node_modules
+    env_file:
+      - .env.dev
+    depends_on:
+      - mqtt
+    networks:
+      - app-network
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: mqtt-dev
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
