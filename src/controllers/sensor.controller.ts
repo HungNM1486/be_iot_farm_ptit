@@ -1,107 +1,44 @@
 import { Request, Response } from "express";
-import SensorData from "../models/sensorData.model";
-import SensorSettings from "../models/sensorSetting.model";
+import AlertSettings from "../models/alertSetting.model";
+import { sendSensorConfig } from "../services/mqtt.service";
 
-// Lấy dữ liệu cảm biến của vị trí
-export const getSensorData = async (req: Request, res: Response) => {
-  try {
-    const { locationId, from, to, limit } = req.query;
-
-    if (!locationId) {
-      return res.status(400).json({
-        success: false,
-        message: "Vui lòng cung cấp locationId",
-      });
-    }
-
-    // Xây dựng query
-    const query: any = { locationId };
-
-    // Thêm điều kiện ngày nếu có
-    if (from || to) {
-      query.recorded_at = {};
-      if (from) query.recorded_at.$gte = new Date(from as string);
-      if (to) query.recorded_at.$lte = new Date(to as string);
-    }
-
-    // Lấy dữ liệu từ cơ sở dữ liệu
-    const data = await SensorData.find(query)
-      .sort({ recorded_at: -1 })
-      .limit(limit ? parseInt(limit as string) : 100);
-
-    res.status(200).json({
-      success: true,
-      count: data.length,
-      data,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message:
-        error instanceof Error ? error.message : "Lỗi khi lấy dữ liệu cảm biến",
-    });
-  }
-};
-
-// Lấy cài đặt cảm biến của vị trí
-export const getSensorSettings = async (req: Request, res: Response) => {
+// Lấy ngưỡng cảnh báo của location
+export const getAlertSettings = async (req: Request, res: Response) => {
   try {
     const { locationId } = req.params;
-
-    const settings = await SensorSettings.findOne({ locationId });
-
+    const settings = await AlertSettings.findOne({ locationId });
     if (!settings) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy cài đặt cảm biến cho vị trí này",
+        message: "Không tìm thấy ngưỡng cảnh báo cho vị trí này",
       });
     }
-
-    res.status(200).json({
-      success: true,
-      data: settings,
-    });
+    res.status(200).json({ success: true, data: settings });
   } catch (error) {
     res.status(500).json({
       success: false,
       message:
-        error instanceof Error ? error.message : "Lỗi khi lấy cài đặt cảm biến",
+        error instanceof Error ? error.message : "Lỗi khi lấy ngưỡng cảnh báo",
     });
   }
 };
 
-// Cập nhật cài đặt cảm biến
-export const updateSensorSettings = async (req: Request, res: Response) => {
+// Cập nhật ngưỡng cảnh báo của location
+export const updateAlertSettings = async (req: Request, res: Response) => {
   try {
     const { locationId } = req.params;
-    const { frequency, is_active } = req.body;
-
-    // Tìm và cập nhật cài đặt
-    let settings = await SensorSettings.findOne({ locationId });
-
+    const update = req.body;
+    let settings = await AlertSettings.findOne({ locationId });
     if (!settings) {
-      // Tạo mới nếu chưa có
-      settings = new SensorSettings({
-        locationId,
-        frequency: frequency || 15,
-        is_active: is_active !== undefined ? is_active : true,
-        last_updated: new Date(),
-        updated_at: new Date(),
-      });
+      settings = new AlertSettings({ locationId, ...update });
     } else {
-      // Cập nhật nếu đã tồn tại
-      if (frequency !== undefined) settings.frequency = frequency;
-      if (is_active !== undefined) settings.is_active = is_active;
-      settings.last_updated = new Date();
-      settings.updated_at = new Date();
+      Object.assign(settings, update);
     }
-
     await settings.save();
-
     res.status(200).json({
       success: true,
       data: settings,
-      message: "Đã cập nhật cài đặt cảm biến",
+      message: "Đã cập nhật ngưỡng cảnh báo",
     });
   } catch (error) {
     res.status(500).json({
@@ -109,7 +46,25 @@ export const updateSensorSettings = async (req: Request, res: Response) => {
       message:
         error instanceof Error
           ? error.message
-          : "Lỗi khi cập nhật cài đặt cảm biến",
+          : "Lỗi khi cập nhật ngưỡng cảnh báo",
+    });
+  }
+};
+
+// Gửi config xuống ESP32 qua MQTT
+type SensorConfig = { interval?: number; calibrate_mq02?: boolean };
+export const sendConfigToEsp32 = async (req: Request, res: Response) => {
+  try {
+    const { location_code } = req.params;
+    const config: SensorConfig = req.body;
+    sendSensorConfig(location_code, config);
+    res
+      .status(200)
+      .json({ success: true, message: "Đã gửi config tới ESP32", config });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Lỗi khi gửi config",
     });
   }
 };

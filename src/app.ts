@@ -11,9 +11,7 @@ import locationRouter from "./routes/location.routes";
 import plantRouter from "./routes/plant.routes";
 import connectDB from "./config/database";
 import sensorRouter from "./routes/sensor.routes";
-import alertRouter from "./routes/alert.routes";
 import notificationRouter from "./routes/notification.routes";
-import deviceRouter from "./routes/device.routes";
 import careTaskRouter from "./routes/caretask.routes";
 import { authenticate } from "./middleware/auth.middleware";
 import * as plantController from "./controllers/plant.controller";
@@ -52,9 +50,7 @@ app.use("/auth", authRouter);
 app.use("/api/locations", locationRouter);
 app.use("/api/locations/:locationId/plants", plantRouter);
 app.use("/api/sensors", sensorRouter);
-app.use("/api/alerts", alertRouter);
 app.use("/api/notifications", notificationRouter);
-app.use("/api/devices", deviceRouter);
 app.use("/api/locations/:locationId/plants/:plantId/caretasks", careTaskRouter);
 // Root endpoint
 app.get("/", (req, res) => {

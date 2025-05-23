@@ -2,7 +2,6 @@
 import AlertSettings from "../models/alertSetting.model";
 import Notification from "../models/notification.model";
 import mongoose from "mongoose";
-import { sendEmailNotification } from "./notification.service";
 import User from "../models/user.model";
 import Location from "../models/location.model";
 
@@ -26,35 +25,54 @@ export async function checkAlertThresholds(
 
     // Kiểm tra dựa trên loại cảm biến
     switch (sensorType) {
-      case "temperature":
-        if (value < alertSettings.temperature_min) {
+      case "temperature": {
+        const min = alertSettings.temperature_min;
+        const max = alertSettings.temperature_max;
+        if (min !== undefined && min !== null && value < min) {
           isAlert = true;
-          alertMessage = `Nhiệt độ quá thấp: ${value}°C (ngưỡng: ${alertSettings.temperature_min}°C)`;
-        } else if (value > alertSettings.temperature_max) {
+          alertMessage = `Nhiệt độ quá thấp: ${value}°C (ngưỡng: ${min}°C)`;
+        } else if (max !== undefined && max !== null && value > max) {
           isAlert = true;
-          alertMessage = `Nhiệt độ quá cao: ${value}°C (ngưỡng: ${alertSettings.temperature_max}°C)`;
+          alertMessage = `Nhiệt độ quá cao: ${value}°C (ngưỡng: ${max}°C)`;
         }
         break;
-
-      case "soil_moisture":
-        if (value < alertSettings.soil_moisture_min) {
+      }
+      case "soil_moisture": {
+        const min = alertSettings.soil_moisture_min;
+        const max = alertSettings.soil_moisture_max;
+        if (min !== undefined && min !== null && value < min) {
           isAlert = true;
-          alertMessage = `Độ ẩm đất quá thấp: ${value}% (ngưỡng: ${alertSettings.soil_moisture_min}%)`;
-        } else if (value > alertSettings.soil_moisture_max) {
+          alertMessage = `Độ ẩm đất quá thấp: ${value}% (ngưỡng: ${min}%)`;
+        } else if (max !== undefined && max !== null && value > max) {
           isAlert = true;
-          alertMessage = `Độ ẩm đất quá cao: ${value}% (ngưỡng: ${alertSettings.soil_moisture_max}%)`;
+          alertMessage = `Độ ẩm đất quá cao: ${value}% (ngưỡng: ${max}%)`;
         }
         break;
-
-      case "light_intensity":
-        if (value < alertSettings.light_intensity_min) {
+      }
+      case "light_intensity": {
+        const min = alertSettings.light_intensity_min;
+        const max = alertSettings.light_intensity_max;
+        if (min !== undefined && min !== null && value < min) {
           isAlert = true;
-          alertMessage = `Cường độ ánh sáng quá thấp: ${value} lux (ngưỡng: ${alertSettings.light_intensity_min} lux)`;
-        } else if (value > alertSettings.light_intensity_max) {
+          alertMessage = `Cường độ ánh sáng quá thấp: ${value} lux (ngưỡng: ${min} lux)`;
+        } else if (max !== undefined && max !== null && value > max) {
           isAlert = true;
-          alertMessage = `Cường độ ánh sáng quá cao: ${value} lux (ngưỡng: ${alertSettings.light_intensity_max} lux)`;
+          alertMessage = `Cường độ ánh sáng quá cao: ${value} lux (ngưỡng: ${max} lux)`;
         }
         break;
+      }
+      case "gas": {
+        const min = alertSettings.gas_min;
+        const max = alertSettings.gas_max;
+        if (min !== undefined && min !== null && value < min) {
+          isAlert = true;
+          alertMessage = `Nồng độ khí gas quá thấp: ${value} (ngưỡng: ${min})`;
+        } else if (max !== undefined && max !== null && value > max) {
+          isAlert = true;
+          alertMessage = `Nồng độ khí gas quá cao: ${value} (ngưỡng: ${max})`;
+        }
+        break;
+      }
     }
 
     // Tạo thông báo nếu vượt ngưỡng
@@ -94,10 +112,6 @@ async function sendAlert(message: string, locationId: string) {
       console.error(`Không tìm thấy người dùng của vị trí ${locationId}`);
       return;
     }
-
-    // Gửi email thông báo
-    const subject = `Cảnh báo từ vị trí: ${location.name}`;
-    await sendEmailNotification(user.email, subject, message);
 
     console.log(
       `Đã gửi cảnh báo "${message}" cho vị trí ${locationId} đến ${user.email}`

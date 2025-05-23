@@ -5,21 +5,23 @@ import { authenticate } from "../middleware/auth.middleware";
 
 const router = Router();
 
-// Lấy dữ liệu cảm biến
-router.get("/data", authenticate, sensorController.getSensorData);
-
-// Lấy và cập nhật cài đặt cảm biến
+// Ngưỡng cảnh báo
 router.get(
-  "/settings/:locationId",
+  "/alert-settings/:locationId",
   authenticate,
-  sensorController.getSensorSettings
+  sensorController.getAlertSettings
+);
+router.put(
+  "/alert-settings/:locationId",
+  authenticate,
+  sensorController.updateAlertSettings
 );
 
-// Cập nhật cài đặt cảm biến
-router.put(
-  "/settings/:locationId",
+// Gửi config xuống ESP32
+router.post(
+  "/send-config/:location_code",
   authenticate,
-  sensorController.updateSensorSettings
+  sensorController.sendConfigToEsp32
 );
 
 export default router;

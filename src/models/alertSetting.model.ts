@@ -9,6 +9,8 @@ export interface IAlertSettings extends Document {
   soil_moisture_max: number;
   light_intensity_min: number;
   light_intensity_max: number;
+  gas_min: number;
+  gas_max: number;
   created_at: Date;
   updated_at: Date;
   locationId: mongoose.Types.ObjectId;
@@ -25,6 +27,8 @@ const AlertSettingsSchema: Schema = new Schema({
   soil_moisture_max: { type: Number, default: 80 },
   light_intensity_min: { type: Number, default: 300 },
   light_intensity_max: { type: Number, default: 800 },
+  gas_min: { type: Number, default: 0 },
+  gas_max: { type: Number, default: 1000 },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
   locationId: { type: Schema.Types.ObjectId, ref: "Location", required: true },

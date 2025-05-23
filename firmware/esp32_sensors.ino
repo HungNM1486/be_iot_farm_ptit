@@ -4,8 +4,8 @@
 #include <DHT.h>
 
 // =============== CẤU HÌNH WIFI =================
-const char* ssid = "TEN_WIFI_CUA_BAN";     // Thay tên WiFi của bạn
-const char* password = "MAT_KHAU_WIFI";    // Thay mật khẩu WiFi của bạn
+const char* ssid = "BonDangAru";     // Thay tên WiFi của bạn
+const char* password = "BonNamDang";    // Thay mật khẩu WiFi của bạn
 
 // =============== CẤU HÌNH MQTT ================
 const char* mqtt_server = "103.6.234.189";
@@ -13,9 +13,9 @@ const int mqtt_port = 1883;
 const char* mqtt_user = "admin";           // Username MQTT
 const char* mqtt_password = "admin";       // Password MQTT
 const char* deviceId = "ESP32_SENSORS_001"; // ID thiết bị, đổi theo nhu cầu
-const char* topic_data = "iot/sensors/data";
-const char* topic_status = "iot/sensors/status";
-const char* topic_config = "iot/sensors/config";
+const char* topic_data = "iot/sensors/khu-a-285/data";
+const char* topic_status = "iot/sensors/khu-a-285/status";
+const char* topic_config = "iot/sensors/khu-a-285/config";
 
 // =============== CẤU HÌNH CẢM BIẾN =============
 #define DHTPIN 4          // Chân kết nối DHT11
