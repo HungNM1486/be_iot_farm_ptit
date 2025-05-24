@@ -44,7 +44,7 @@ app.use(
   express.static(path.join(__dirname, "../public/defaults"))
 );
 
-app.use("/", fileUploadRouter);
+app.use("/api", fileUploadRouter);
 app.use("/", predictRouter);
 app.use("/auth", authRouter);
 app.use("/api/locations", locationRouter);

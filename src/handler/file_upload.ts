@@ -17,7 +17,6 @@ const ensureDir = (dirPath: string) => {
 };
 
 ensureDir("temp");
-ensureDir("uploads");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -32,153 +31,6 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-
-router.post("/upload/init", authenticate, (req: Request, res: Response) => {
-  const fileId = crypto.randomUUID();
-
-  console.log(`File ID: ${fileId}`);
-
-  res.json({
-    success: true,
-    fileId,
-  });
-});
-
-router.post(
-  "/upload/chunk",
-  authenticate,
-  upload.single("chunk"),
-  (req: Request, res: Response) => {
-    const { fileId, chunkId, totalChunks, fileName } = req.body;
-
-    console.log("Request body:", req.body);
-
-    if (!fileId || chunkId === undefined || !totalChunks) {
-      res.status(400).json({
-        success: false,
-        message: "Missing parameters",
-      });
-
-      return;
-    }
-
-    console.log("Uploaded file:", req.file);
-
-    if (!req.file) {
-      res.status(400).json({
-        success: false,
-        message: "No file uploaded",
-      });
-
-      return;
-    }
-
-    const newFilename = `${fileId}_${chunkId}`;
-    const oldPath = req.file.path;
-    const newPath = path.join("temp", newFilename);
-
-    try {
-      fs.renameSync(oldPath, newPath);
-
-      res.json({
-        success: true,
-        fileId,
-        chunkId: parseInt(chunkId),
-        message: `Chunk ${chunkId} uploaded successfully`,
-      });
-    } catch (error) {
-      console.error("Error renaming file:", error);
-      res.status(500).json({
-        success: false,
-        message: "Error processing file",
-      });
-    }
-  }
-);
-
-router.post(
-  "/upload/complete",
-  authenticate,
-  async (req: Request, res: Response) => {
-    const { fileId, fileName, totalChunks, plantId } = req.body;
-
-    if (!fileId || !fileName || !totalChunks) {
-      res.status(400).json({
-        success: false,
-        message: "Missing parameters",
-      });
-
-      return;
-    }
-
-    try {
-      const expectedChunks = Array.from(
-        { length: parseInt(totalChunks) },
-        (_, i) => i
-      );
-      const missingChunks = [];
-
-      for (let i = 0; i < totalChunks; i++) {
-        const chunkPath = path.join("temp", `${fileId}_${i}`);
-
-        if (!fs.existsSync(chunkPath)) {
-          missingChunks.push(i);
-        }
-      }
-
-      if (missingChunks.length > 0) {
-        res.status(400).json({
-          success: false,
-          message: "Missing chunks",
-          missingChunks,
-        });
-
-        return;
-      }
-
-      const uploadPath = path.join("uploads", fileName);
-      const writeStream = fs.createWriteStream(uploadPath);
-
-      for (let i = 0; i < totalChunks; i++) {
-        const chunkPath = path.join("temp", `${fileId}_${i}`);
-        const chunk = fs.readFileSync(chunkPath);
-
-        writeStream.write(chunk);
-        fs.unlinkSync(chunkPath);
-      }
-
-      writeStream.end();
-
-      // Lưu thông tin ảnh vào MongoDB
-      const newImage = new IMG4Predict({
-        imgURL: `/uploads/${fileName}`,
-        uploaded_at: new Date(),
-        created_at: new Date(),
-        PlantId: plantId || null,
-      });
-
-      const savedImage = await newImage.save();
-
-      // Dự đoán ảnh
-      const result = await predictService.predict(
-        uploadPath,
-        savedImage._id.toString()
-      );
-
-      res.json({
-        success: true,
-        result,
-        filePath: uploadPath,
-        image: savedImage,
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
-    }
-  }
-);
 
 const cleanupTempFiles = (directory: string, maxAgeHours = 24) => {
   try {
@@ -218,9 +70,6 @@ const scheduleCleanup = () => {
   }, 1 * 60 * 60 * 1000); // 1 giờ
 };
 
-// Thêm vào phần khởi tạo
-ensureDir("temp");
-ensureDir("uploads");
 scheduleCleanup();
 
 // Thêm endpoint để lấy kết quả dự đoán
@@ -247,5 +96,51 @@ router.get("/predictions/:id", async (req: Request, res: Response) => {
     });
   }
 });
+
+// Đảm bảo thư mục uploads/camera tồn tại
+ensureDir("uploads/camera");
+
+const cameraStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads/camera"),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}${ext}`);
+  },
+});
+const cameraUpload = multer({ storage: cameraStorage });
+
+// API nhận ảnh từ ESP32-CAM, lưu và dự đoán bệnh
+router.post(
+  "/camera/upload",
+  cameraUpload.single("image"),
+  async (req, res) => {
+    try {
+      if (!req.file)
+        return res
+          .status(400)
+          .json({ success: false, message: "Không có file ảnh" });
+      const imagePath = req.file.path;
+      const imageUrl = `/uploads/camera/${req.file.filename}`;
+      // Lưu ảnh vào DB
+      const imgDoc = await IMG4Predict.create({ imgURL: imageUrl });
+      // Gọi hàm dự đoán, truyền imageId để lưu prediction
+      const result = await predictService.predict(
+        imagePath,
+        imgDoc._id.toString()
+      );
+      res.json({
+        success: true,
+        imageUrl,
+        imageId: imgDoc._id,
+        disease: result.className,
+        probability: result.confidence,
+        predictionId: result.prediction,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: "Lỗi khi dự đoán bệnh" });
+    }
+  }
+);
 
 export default router;

@@ -4,8 +4,8 @@
 #include <PubSubClient.h>
 
 // =============== CẤU HÌNH WIFI =================
-const char* ssid = "TEN_WIFI_CUA_BAN";     // Thay tên WiFi của bạn
-const char* password = "MAT_KHAU_WIFI";    // Thay mật khẩu WiFi của bạn
+const char* ssid = "BonDangAru";     // Thay tên WiFi của bạn
+const char* password = "BonNamDang";    // Thay mật khẩu WiFi của bạn
 
 // =============== CẤU HÌNH MQTT ================
 const char* mqtt_server = "103.6.234.189";
