@@ -13,8 +13,8 @@ import connectDB from "./config/database";
 import sensorRouter from "./routes/sensor.routes";
 import notificationRouter from "./routes/notification.routes";
 import careTaskRouter from "./routes/caretask.routes";
-import { authenticate } from "./middleware/auth.middleware";
-import * as plantController from "./controllers/plant.controller";
+import http from "http";
+import { Server } from "socket.io";
 
 import "./services/mqtt.service";
 
@@ -24,6 +24,10 @@ dotenv.config();
 // Initialize express app
 export const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+
+// Tạo HTTP server và tích hợp socket.io
+const server = http.createServer(app);
+export const io = new Server(server, { cors: { origin: "*" } });
 
 // Connect to MongoDB Atlas
 connectDB()
@@ -68,7 +72,7 @@ const initModel = async () => {
 };
 
 // Start server
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server started at http://localhost:${port}`);
   // Initialize model after server starts
   initModel();

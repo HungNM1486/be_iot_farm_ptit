@@ -2,10 +2,9 @@ import multer from "multer";
 import { Router, Request, Response } from "express";
 import path from "path";
 import fs from "fs";
-import crypto from "crypto";
 import predictService from "../services/image_predict";
 import IMG4Predict from "../models/img4predict.model";
-import { authenticate } from "../middleware/auth.middleware";
+import { io } from "../app";
 
 const router = Router();
 
@@ -128,13 +127,26 @@ router.post(
         imagePath,
         imgDoc._id.toString()
       );
+      // Xác định predictionId trả về
+      const predictionId =
+        "predictionId" in result
+          ? (result as any).predictionId
+          : result.prediction;
+      // Emit socket.io tới tất cả client
+      io.emit("new_image", {
+        imageUrl,
+        imageId: imgDoc._id,
+        disease: result.className,
+        probability: result.confidence,
+        predictionId,
+      });
       res.json({
         success: true,
         imageUrl,
         imageId: imgDoc._id,
         disease: result.className,
         probability: result.confidence,
-        predictionId: result.prediction,
+        predictionId,
       });
     } catch (error) {
       console.error(error);

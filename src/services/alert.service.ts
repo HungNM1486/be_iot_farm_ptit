@@ -121,9 +121,6 @@ async function sendAlert(message: string, locationId: string) {
   }
 }
 
-/**
- * Lấy các thông báo chưa đọc
- */
 export async function getUnreadNotifications(userId: string) {
   try {
     // Tìm tất cả thông báo chưa đọc, có thể thêm logic phân quyền nếu cần

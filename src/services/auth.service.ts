@@ -9,7 +9,6 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1d";
 
 class AuthService {
-  // Đăng ký người dùng mới
   async register(userData: {
     username: string;
     email: string;
@@ -18,7 +17,6 @@ class AuthService {
     phone?: string;
   }) {
     try {
-      // Kiểm tra email đã tồn tại
       const existingEmail = await User.findOne({ email: userData.email });
       if (existingEmail) {
         throw new Error("Email already exists");

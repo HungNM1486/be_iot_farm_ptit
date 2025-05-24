@@ -39,17 +39,12 @@ export const authenticate = async (
 
     const token = authHeader.split(" ")[1];
 
-    // Log token để debug
-    console.log("Auth Token:", token.substring(0, 15) + "...");
-
     // Verify token
     const decoded = jwt.verify(token, JWT_SECRET) as {
       id: string;
       email: string;
     };
-    console.log("Decoded Token:", decoded);
 
-    // Kiểm tra user có tồn tại
     const user = await User.findById(decoded.id);
 
     if (!user) {
@@ -60,10 +55,6 @@ export const authenticate = async (
       });
     }
 
-    console.log("Found User:", user.username);
-    console.log("User ID from DB:", user._id);
-    console.log("User ID toString():", user._id.toString());
-
     // Thêm thông tin user vào request
     req.user = {
       id: user._id.toString(), // Đảm bảo chuyển đổi thành string
@@ -71,11 +62,8 @@ export const authenticate = async (
       username: user.username,
     };
 
-    console.log("req.user set to:", req.user);
-
     next();
   } catch (error) {
-    console.error("Auth error:", error);
     return res.status(401).json({
       success: false,
       message: "Token is not valid",
