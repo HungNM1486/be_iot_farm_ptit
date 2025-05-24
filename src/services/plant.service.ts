@@ -139,6 +139,42 @@ class PlantService {
       throw error;
     }
   }
+
+  // Lấy tất cả cây trồng theo userId
+  async getPlantsByUserId(
+    userId: mongoose.Types.ObjectId,
+    page: number = 1,
+    limit: number = 10,
+    filter: any = {}
+  ): Promise<{
+    plants: IPlant[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    try {
+      // Lấy tất cả locationId của user
+      const locations = await Location.find({ userId });
+      const locationIds = locations.map((loc) => loc._id);
+      const query: any = { locationId: { $in: locationIds }, ...filter };
+      const total = await Plant.countDocuments(query);
+      const totalPages = Math.ceil(total / limit);
+      const plants = await Plant.find(query)
+        .sort({ created_at: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit);
+      return {
+        plants,
+        total,
+        page,
+        limit,
+        totalPages,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export default new PlantService();

@@ -8,12 +8,10 @@ export const register = async (req: Request, res: Response) => {
   try {
     const { username, email, password, address, phone } = req.body;
     if (!username || !email || !password) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Please provide username, email and password",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Please provide username, email and password",
+      });
     }
     const result = await authService.register({
       username,
@@ -22,20 +20,16 @@ export const register = async (req: Request, res: Response) => {
       address,
       phone,
     });
-    return res
-      .status(201)
-      .json({
-        success: true,
-        message: "User registered successfully",
-        data: result,
-      });
+    return res.status(201).json({
+      success: true,
+      message: "User registered successfully",
+      data: result,
+    });
   } catch (error) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: error instanceof Error ? error.message : "Registration failed",
-      });
+    return res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Registration failed",
+    });
   }
 };
 
@@ -52,13 +46,10 @@ export const login = async (req: Request, res: Response) => {
       .status(200)
       .json({ success: true, message: "Login successful", data: result });
   } catch (error) {
-    return res
-      .status(401)
-      .json({
-        success: false,
-        message:
-          error instanceof Error ? error.message : "Authentication failed",
-      });
+    return res.status(401).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Authentication failed",
+    });
   }
 };
 
@@ -66,13 +57,10 @@ export const getProfile = async (req: Request, res: Response) => {
   try {
     return res.status(200).json({ success: true, data: { user: req.user } });
   } catch (error) {
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message:
-          error instanceof Error ? error.message : "Something went wrong",
-      });
+    return res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Something went wrong",
+    });
   }
 };
 
@@ -83,22 +71,17 @@ export const deleteAccount = async (req: Request, res: Response) => {
     if (!userId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
     if (!password)
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Vui lòng cung cấp mật khẩu để xác nhận xóa tài khoản",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng cung cấp mật khẩu để xác nhận xóa tài khoản",
+      });
     const result = await authService.deleteAccount(userId, password);
     return res.status(200).json({ success: true, message: result.message });
   } catch (error) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message:
-          error instanceof Error ? error.message : "Lỗi khi xóa tài khoản",
-      });
+    return res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Lỗi khi xóa tài khoản",
+    });
   }
 };
 
@@ -114,8 +97,7 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     }
 
     // Lấy thông tin từ request body
-    const { username, email, address, phone, removeAvatar, defaultAvatar } =
-      req.body;
+    const { username, email, address, phone, removeAvatar } = req.body;
 
     // Tạo object chứa các trường cần update
     const updateData: {
@@ -126,7 +108,6 @@ export const updateUserProfile = async (req: Request, res: Response) => {
       avatar?: string;
     } = {};
 
-    // Cập nhật các trường thông tin cơ bản
     if (username) updateData.username = username;
     if (email) updateData.email = email;
     if (address !== undefined) updateData.address = address;
@@ -141,16 +122,10 @@ export const updateUserProfile = async (req: Request, res: Response) => {
       });
     }
 
-    // Xử lý avatar dựa trên yêu cầu
-    // Trường hợp 1: Người dùng muốn xóa avatar
+    // Xử lý avatar
     if (removeAvatar === "true" || removeAvatar === true) {
-      // Xóa file avatar cũ nếu có và không phải ảnh mặc định
-      if (
-        user.avatar &&
-        user.avatar !== "" &&
-        !user.avatar.includes("default") &&
-        !user.avatar.startsWith("/defaults/")
-      ) {
+      // Xóa file avatar cũ nếu có
+      if (user.avatar && user.avatar !== "") {
         try {
           const avatarPath = path.join(
             __dirname,
@@ -164,48 +139,12 @@ export const updateUserProfile = async (req: Request, res: Response) => {
           console.error("Lỗi khi xóa file avatar:", error);
         }
       }
-      // Đặt avatar về chuỗi rỗng
       updateData.avatar = "";
-    }
-    // Trường hợp 2: Người dùng chọn ảnh đại diện mặc định từ FE
-    else if (defaultAvatar) {
-      // Kiểm tra nếu avatar hiện tại là uploaded file (không phải mặc định), xóa file cũ
-      if (
-        user.avatar &&
-        user.avatar !== "" &&
-        !user.avatar.includes("default") &&
-        !user.avatar.startsWith("/defaults/")
-      ) {
-        try {
-          const oldAvatarPath = path.join(
-            __dirname,
-            "../../",
-            user.avatar.substring(1)
-          );
-          if (fs.existsSync(oldAvatarPath)) {
-            fs.unlinkSync(oldAvatarPath);
-          }
-        } catch (error) {
-          console.error("Lỗi khi xóa avatar cũ:", error);
-        }
-      }
-
-      // Lưu mã ảnh mặc định vào DB
-      // Lưu ý: Ảnh mặc định có thể được định dạng như "default_avatar_1", "male_avatar", "female_avatar", etc.
-      updateData.avatar = `/defaults/${defaultAvatar}`;
-    }
-    // Trường hợp 3: Người dùng muốn upload avatar mới
-    else if (req.file) {
-      // Lấy đường dẫn file mới
+    } else if (req.file) {
+      // Upload avatar mới
       const avatarPath = `/uploads/avatars/${req.file.filename}`;
-
-      // Nếu đã có avatar cũ và không phải ảnh mặc định, xóa file cũ
-      if (
-        user.avatar &&
-        user.avatar !== "" &&
-        !user.avatar.includes("default") &&
-        !user.avatar.startsWith("/defaults/")
-      ) {
+      // Xóa avatar cũ nếu có
+      if (user.avatar && user.avatar !== "") {
         try {
           const oldAvatarPath = path.join(
             __dirname,
@@ -219,12 +158,9 @@ export const updateUserProfile = async (req: Request, res: Response) => {
           console.error("Lỗi khi xóa avatar cũ:", error);
         }
       }
-
-      // Thêm avatar vào dữ liệu cập nhật
       updateData.avatar = avatarPath;
     }
 
-    // Nếu không có dữ liệu gì để cập nhật
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
         success: false,
@@ -232,7 +168,6 @@ export const updateUserProfile = async (req: Request, res: Response) => {
       });
     }
 
-    // Gọi service để cập nhật
     const result = await authService.updateProfile(userId, updateData);
 
     res.status(200).json({

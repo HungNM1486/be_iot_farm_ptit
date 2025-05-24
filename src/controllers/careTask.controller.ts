@@ -5,9 +5,10 @@ import plantService from "../services/plant.service";
 
 export const createCareTask = async (req: Request, res: Response) => {
   try {
-    const { plantId } = req.params;
-    const { name, type, scheduled_date, note } = req.body;
+    const { plantId, name, type, scheduled_date, note } = req.body;
     const userId = req.user?.id;
+
+    console.log("req.body:", req.body);
 
     if (!userId) {
       return res.status(401).json({
@@ -16,7 +17,7 @@ export const createCareTask = async (req: Request, res: Response) => {
       });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(plantId)) {
+    if (!plantId || !mongoose.Types.ObjectId.isValid(plantId)) {
       return res.status(400).json({
         success: false,
         message: "ID cây trồng không hợp lệ",
@@ -68,9 +69,8 @@ export const createCareTask = async (req: Request, res: Response) => {
 
 export const getCareTasks = async (req: Request, res: Response) => {
   try {
-    const { plantId } = req.params;
+    const { plantId, status, upcoming } = req.query;
     const userId = req.user?.id;
-    const { status, upcoming } = req.query;
 
     if (!userId) {
       return res.status(401).json({
@@ -79,7 +79,7 @@ export const getCareTasks = async (req: Request, res: Response) => {
       });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(plantId)) {
+    if (!plantId || !mongoose.Types.ObjectId.isValid(plantId as string)) {
       return res.status(400).json({
         success: false,
         message: "ID cây trồng không hợp lệ",
@@ -88,7 +88,7 @@ export const getCareTasks = async (req: Request, res: Response) => {
 
     // Kiểm tra quyền truy cập cây trồng
     const plant = await plantService.getPlantById(
-      new mongoose.Types.ObjectId(plantId)
+      new mongoose.Types.ObjectId(plantId as string)
     );
     if (!plant) {
       return res.status(404).json({
@@ -101,7 +101,7 @@ export const getCareTasks = async (req: Request, res: Response) => {
     if (upcoming === "true") {
       const days = parseInt(req.query.days as string) || 7;
       tasks = await careTaskService.getUpcomingTasks(
-        new mongoose.Types.ObjectId(plantId),
+        new mongoose.Types.ObjectId(plantId as string),
         days
       );
     } else {
@@ -110,7 +110,7 @@ export const getCareTasks = async (req: Request, res: Response) => {
         filter.status = status;
       }
       tasks = await careTaskService.getCareTasksByPlantId(
-        new mongoose.Types.ObjectId(plantId),
+        new mongoose.Types.ObjectId(plantId as string),
         filter
       );
     }
@@ -133,7 +133,7 @@ export const getCareTasks = async (req: Request, res: Response) => {
 
 export const getCareTask = async (req: Request, res: Response) => {
   try {
-    const { plantId, taskId } = req.params;
+    const { taskId } = req.params;
     const userId = req.user?.id;
 
     if (!userId) {
@@ -143,24 +143,10 @@ export const getCareTask = async (req: Request, res: Response) => {
       });
     }
 
-    if (
-      !mongoose.Types.ObjectId.isValid(plantId) ||
-      !mongoose.Types.ObjectId.isValid(taskId)
-    ) {
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
       return res.status(400).json({
         success: false,
         message: "ID không hợp lệ",
-      });
-    }
-
-    // Kiểm tra quyền truy cập cây trồng
-    const plant = await plantService.getPlantById(
-      new mongoose.Types.ObjectId(plantId)
-    );
-    if (!plant) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy cây trồng",
       });
     }
 
@@ -194,8 +180,8 @@ export const getCareTask = async (req: Request, res: Response) => {
 
 export const updateCareTask = async (req: Request, res: Response) => {
   try {
-    const { plantId, taskId } = req.params;
-    const { name, type, scheduled_date, note } = req.body;
+    const { taskId } = req.params;
+    const { name, type, scheduled_date, note, plantId } = req.body;
     const userId = req.user?.id;
 
     if (!userId) {
@@ -205,36 +191,30 @@ export const updateCareTask = async (req: Request, res: Response) => {
       });
     }
 
-    if (
-      !mongoose.Types.ObjectId.isValid(plantId) ||
-      !mongoose.Types.ObjectId.isValid(taskId)
-    ) {
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
       return res.status(400).json({
         success: false,
         message: "ID không hợp lệ",
       });
     }
 
-    // Kiểm tra quyền truy cập cây trồng
-    const plant = await plantService.getPlantById(
-      new mongoose.Types.ObjectId(plantId)
-    );
-    if (!plant) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy cây trồng",
-      });
-    }
-
-    const task = await careTaskService.getCareTaskById(
-      new mongoose.Types.ObjectId(taskId)
-    );
-
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy công việc chăm sóc",
-      });
+    // Nếu có truyền plantId thì kiểm tra quyền truy cập
+    if (plantId) {
+      if (!mongoose.Types.ObjectId.isValid(plantId)) {
+        return res.status(400).json({
+          success: false,
+          message: "ID cây trồng không hợp lệ",
+        });
+      }
+      const plant = await plantService.getPlantById(
+        new mongoose.Types.ObjectId(plantId)
+      );
+      if (!plant) {
+        return res.status(404).json({
+          success: false,
+          message: "Không tìm thấy cây trồng",
+        });
+      }
     }
 
     const updateData: any = {};
@@ -267,7 +247,7 @@ export const updateCareTask = async (req: Request, res: Response) => {
 
 export const deleteCareTask = async (req: Request, res: Response) => {
   try {
-    const { plantId, taskId } = req.params;
+    const { taskId } = req.params;
     const userId = req.user?.id;
 
     if (!userId) {
@@ -277,24 +257,10 @@ export const deleteCareTask = async (req: Request, res: Response) => {
       });
     }
 
-    if (
-      !mongoose.Types.ObjectId.isValid(plantId) ||
-      !mongoose.Types.ObjectId.isValid(taskId)
-    ) {
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
       return res.status(400).json({
         success: false,
         message: "ID không hợp lệ",
-      });
-    }
-
-    // Kiểm tra quyền truy cập cây trồng
-    const plant = await plantService.getPlantById(
-      new mongoose.Types.ObjectId(plantId)
-    );
-    if (!plant) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy cây trồng",
       });
     }
 

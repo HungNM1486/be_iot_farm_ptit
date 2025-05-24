@@ -15,6 +15,8 @@ import notificationRouter from "./routes/notification.routes";
 import careTaskRouter from "./routes/caretask.routes";
 import http from "http";
 import { Server } from "socket.io";
+import * as plantController from "./controllers/plant.controller";
+import { authenticate } from "./middleware/auth.middleware";
 
 import "./services/mqtt.service";
 
@@ -52,10 +54,11 @@ app.use("/api", fileUploadRouter);
 app.use("/", predictRouter);
 app.use("/auth", authRouter);
 app.use("/api/locations", locationRouter);
-app.use("/api/locations/:locationId/plants", plantRouter);
+app.use("/api/plants", plantRouter);
 app.use("/api/sensors", sensorRouter);
 app.use("/api/notifications", notificationRouter);
-app.use("/api/locations/:locationId/plants/:plantId/caretasks", careTaskRouter);
+app.use("/api/caretask", careTaskRouter);
+
 // Root endpoint
 app.get("/", (req, res) => {
   res.json({ message: "Smart Agriculture IoT API is running" });

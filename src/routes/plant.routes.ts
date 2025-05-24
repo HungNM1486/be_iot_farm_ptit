@@ -5,7 +5,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-const router = Router({ mergeParams: true }); // mergeParams để có thể truy cập params từ router cha
+const router = Router();
 
 // Đảm bảo thư mục lưu ảnh cây trồng tồn tại
 const plantImagesDir = path.join(__dirname, "../../uploads/plants");
@@ -50,11 +50,8 @@ const plantImageUpload = multer({
 // Áp dụng middleware xác thực cho tất cả routes
 router.use(authenticate);
 
-// Tạo cây trồng mới trong location và season
-router.post("/", plantController.createPlant);
-
-// Lấy tất cả cây trồng trong location
-router.get("/", plantController.getPlantsByLocation);
+// Lấy tất cả cây trồng của user (không phân biệt location)
+router.get("/all", plantController.getPlantsByUser);
 
 // Lấy chi tiết cây trồng
 router.get("/:plantId", plantController.getPlantById);
@@ -68,6 +65,13 @@ router.put(
 
 // Xóa cây trồng
 router.delete("/:plantId", plantController.deletePlant);
+
+// Tạo cây trồng mới
+router.post(
+  "/:locationId",
+  plantImageUpload.single("image"),
+  plantController.createPlant
+);
 
 // Export router
 export default router;

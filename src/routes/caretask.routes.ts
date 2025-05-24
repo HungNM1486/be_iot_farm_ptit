@@ -2,14 +2,14 @@ import { Router } from "express";
 import * as careTaskController from "../controllers/careTask.controller";
 import { authenticate } from "../middleware/auth.middleware";
 
-const router = Router({ mergeParams: true });
+const router = Router();
 
 router.use(authenticate);
 
-// Lấy tất cả caretask của plant
+// Lấy tất cả caretask của plant (truyền plantId qua query)
 router.get("/", careTaskController.getCareTasks);
 
-// Tạo mới caretask cho plant
+// Tạo mới caretask cho plant (truyền plantId qua body)
 router.post("/", careTaskController.createCareTask);
 
 // Lấy chi tiết caretask

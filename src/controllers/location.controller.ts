@@ -7,6 +7,7 @@ export const createLocation = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     const { name, description, area, location_code } = req.body;
+    console.log(userId);
     if (!userId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
     if (!name)
@@ -20,20 +21,16 @@ export const createLocation = async (req: Request, res: Response) => {
       location_code,
       userId: new mongoose.Types.ObjectId(userId),
     });
-    return res
-      .status(201)
-      .json({
-        success: true,
-        message: "Tạo vị trí thành công",
-        data: location,
-      });
+    return res.status(201).json({
+      success: true,
+      message: "Tạo vị trí thành công",
+      data: location,
+    });
   } catch (error) {
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: error instanceof Error ? error.message : "Lỗi khi tạo vị trí",
-      });
+    return res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Lỗi khi tạo vị trí",
+    });
   }
 };
 
@@ -54,23 +51,19 @@ export const getLocations = async (req: Request, res: Response) => {
       limit,
       filter
     );
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Locations retrieved successfully",
-        data: result,
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Locations retrieved successfully",
+      data: result,
+    });
   } catch (error) {
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : "An error occurred while getting locations",
-      });
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "An error occurred while getting locations",
+    });
   }
 };
 
@@ -93,29 +86,23 @@ export const getLocationById = async (req: Request, res: Response) => {
         .status(404)
         .json({ success: false, message: "Location not found" });
     if (location.userId.toString() !== userId)
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Forbidden: You do not have access to this location",
-        });
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Location retrieved successfully",
-        data: location,
-      });
-  } catch (error) {
-    return res
-      .status(500)
-      .json({
+      return res.status(403).json({
         success: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : "An error occurred while getting location",
+        message: "Forbidden: You do not have access to this location",
       });
+    return res.status(200).json({
+      success: true,
+      message: "Location retrieved successfully",
+      data: location,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "An error occurred while getting location",
+    });
   }
 };
 
@@ -139,12 +126,10 @@ export const updateLocation = async (req: Request, res: Response) => {
         .status(404)
         .json({ success: false, message: "Location not found" });
     if (location.userId.toString() !== userId)
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Forbidden: You do not have access to this location",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You do not have access to this location",
+      });
     const updateData: any = {};
     if (name) updateData.name = name;
     if (description !== undefined) updateData.description = description;
@@ -153,23 +138,19 @@ export const updateLocation = async (req: Request, res: Response) => {
       new mongoose.Types.ObjectId(locationId),
       updateData
     );
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Location updated successfully",
-        data: updatedLocation,
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Location updated successfully",
+      data: updatedLocation,
+    });
   } catch (error) {
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : "An error occurred while updating location",
-      });
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "An error occurred while updating location",
+    });
   }
 };
 
@@ -192,12 +173,10 @@ export const deleteLocation = async (req: Request, res: Response) => {
         .status(404)
         .json({ success: false, message: "Location not found" });
     if (location.userId.toString() !== userId)
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Forbidden: You do not have access to this location",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You do not have access to this location",
+      });
     const result = await locationService.deleteLocation(
       new mongoose.Types.ObjectId(locationId)
     );
@@ -209,14 +188,12 @@ export const deleteLocation = async (req: Request, res: Response) => {
       .status(200)
       .json({ success: true, message: "Location deleted successfully" });
   } catch (error) {
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : "An error occurred while deleting location",
-      });
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "An error occurred while deleting location",
+    });
   }
 };

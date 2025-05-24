@@ -4,6 +4,7 @@ import plantService from "../services/plant.service";
 import locationService from "../services/location.service";
 import path from "path";
 import fs from "fs";
+import { log } from "console";
 
 export const createPlant = async (req: Request, res: Response) => {
   try {
@@ -11,6 +12,9 @@ export const createPlant = async (req: Request, res: Response) => {
     const { locationId } = req.params;
     const { name, img, status, note, startdate, plantingDate, address } =
       req.body;
+
+    console.log("req.body:", req.body);
+    console.log("req.params:", req.params);
 
     if (!userId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -55,6 +59,7 @@ export const createPlant = async (req: Request, res: Response) => {
       data: plant,
     });
   } catch (error) {
+    console.error(error); // Thêm dòng này
     return res.status(500).json({
       success: false,
       message:
@@ -75,6 +80,8 @@ export const getPlantsByLocation = async (req: Request, res: Response) => {
       return res
         .status(400)
         .json({ success: false, message: "Invalid location ID" });
+
+    console.log("thêm cây");
     // Kiểm tra quyền truy cập location
     const location = await locationService.getLocationById(
       new mongoose.Types.ObjectId(locationId)
@@ -161,15 +168,7 @@ export const updatePlant = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     const { plantId } = req.params;
-    const {
-      name,
-      status,
-      note,
-      removeImage,
-      defaultImage,
-      plantingDate,
-      address,
-    } = req.body;
+    const { name, status, note, removeImage, plantingDate, address } = req.body;
     if (!userId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
     if (!mongoose.Types.ObjectId.isValid(plantId))
@@ -201,11 +200,7 @@ export const updatePlant = async (req: Request, res: Response) => {
       updateData.plantingDate = plantingDate ? new Date(plantingDate) : null;
     // Xử lý cập nhật ảnh nếu có
     if (removeImage === "true" || removeImage === true) {
-      if (
-        existingPlant.img &&
-        !existingPlant.img.includes("default") &&
-        !existingPlant.img.startsWith("/defaults/")
-      ) {
+      if (existingPlant.img && existingPlant.img !== "") {
         try {
           const imagePath = path.join(
             __dirname,
@@ -218,30 +213,8 @@ export const updatePlant = async (req: Request, res: Response) => {
         }
       }
       updateData.img = "";
-    } else if (defaultImage) {
-      if (
-        existingPlant.img &&
-        !existingPlant.img.includes("default") &&
-        !existingPlant.img.startsWith("/defaults/")
-      ) {
-        try {
-          const imagePath = path.join(
-            __dirname,
-            "../../",
-            existingPlant.img.substring(1)
-          );
-          if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
-        } catch (error) {
-          /* ignore */
-        }
-      }
-      updateData.img = `/defaults/plants/${defaultImage}`;
     } else if (req.file) {
-      if (
-        existingPlant.img &&
-        !existingPlant.img.includes("default") &&
-        !existingPlant.img.startsWith("/defaults/")
-      ) {
+      if (existingPlant.img && existingPlant.img !== "") {
         try {
           const imagePath = path.join(
             __dirname,
@@ -322,6 +295,39 @@ export const deletePlant = async (req: Request, res: Response) => {
         error instanceof Error
           ? error.message
           : "An error occurred while deleting plant",
+    });
+  }
+};
+
+export const getPlantsByUser = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const filter: any = {};
+    if (req.query.status) filter.status = req.query.status;
+    if (req.query.search)
+      filter.name = { $regex: req.query.search, $options: "i" };
+    const result = await plantService.getPlantsByUserId(
+      new mongoose.Types.ObjectId(userId),
+      page,
+      limit,
+      filter
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Plants of user retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "An error occurred while getting user's plants",
     });
   }
 };
