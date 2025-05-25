@@ -43,7 +43,6 @@ class PlantService {
     }
   }
 
-  // Lấy tất cả cây trồng theo locationId
   async getPlantsByLocationId(
     locationId: mongoose.Types.ObjectId,
     page: number = 1,
@@ -59,23 +58,23 @@ class PlantService {
   }> {
     try {
       const query: any = { locationId, ...filter };
+
       if (harvested === true) {
-        query.$or = [
-          { status: "Đã thu hoạch" },
-          { harvestDate: { $exists: true, $ne: null } },
-        ];
+        // Chỉ lấy cây đã thu hoạch
+        query.status = "Đã thu hoạch";
       } else if (harvested === false) {
-        query.$and = [
-          { status: { $ne: "Đã thu hoạch" } },
-          { $or: [{ harvestDate: { $exists: false } }, { harvestDate: null }] },
-        ];
+        // Chỉ lấy cây chưa thu hoạch
+        query.status = { $ne: "Đã thu hoạch" };
       }
+      // Nếu harvested undefined thì lấy tất cả
+
       const total = await Plant.countDocuments(query);
       const totalPages = Math.ceil(total / limit);
       const plants = await Plant.find(query)
         .sort({ created_at: -1 })
         .skip((page - 1) * limit)
         .limit(limit);
+
       return {
         plants,
         total,
@@ -140,7 +139,6 @@ class PlantService {
     }
   }
 
-  // Lấy tất cả cây trồng theo userId
   async getPlantsByUserId(
     userId: mongoose.Types.ObjectId,
     page: number = 1,
@@ -157,13 +155,21 @@ class PlantService {
       // Lấy tất cả locationId của user
       const locations = await Location.find({ userId });
       const locationIds = locations.map((loc) => loc._id);
+
       const query: any = { locationId: { $in: locationIds }, ...filter };
+
+      // Mặc định chỉ lấy cây chưa thu hoạch (trừ khi filter có status cụ thể)
+      if (!filter.status) {
+        query.status = { $ne: "Đã thu hoạch" };
+      }
+
       const total = await Plant.countDocuments(query);
       const totalPages = Math.ceil(total / limit);
       const plants = await Plant.find(query)
         .sort({ created_at: -1 })
         .skip((page - 1) * limit)
         .limit(limit);
+
       return {
         plants,
         total,

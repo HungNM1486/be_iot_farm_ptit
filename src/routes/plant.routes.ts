@@ -50,8 +50,14 @@ const plantImageUpload = multer({
 // Áp dụng middleware xác thực cho tất cả routes
 router.use(authenticate);
 
-// Lấy tất cả cây trồng của user (không phân biệt location)
+// Lấy tất cả cây trồng của user (không phân biệt location) - ACTIVE plants only
 router.get("/all", plantController.getPlantsByUser);
+
+// Lấy tất cả cây đã thu hoạch của user
+router.get("/harvested", plantController.getHarvestedPlantsByUser);
+
+// Lấy cây đã thu hoạch theo location
+router.get("/:locationId/harvested", plantController.getHarvestedPlantsByLocation);
 
 // Lấy chi tiết cây trồng
 router.get("/:plantId", plantController.getPlantById);
@@ -73,5 +79,7 @@ router.post(
   plantController.createPlant
 );
 
-// Export router
+// Lấy cây trồng theo location (ACTIVE plants only)
+router.get("/:locationId/plants", plantController.getPlantsByLocation);
+
 export default router;

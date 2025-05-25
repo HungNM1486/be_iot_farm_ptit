@@ -168,13 +168,27 @@ export const updatePlant = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     const { plantId } = req.params;
-    const { name, status, note, removeImage, plantingDate, address } = req.body;
+    const {
+      name,
+      status,
+      note,
+      removeImage,
+      plantingDate,
+      address,
+      // Thêm các fields cho harvest
+      "yield[amount]": yieldAmount,
+      "yield[unit]": yieldUnit,
+      "quality[rating]": qualityRating,
+      "quality[description]": qualityDescription,
+    } = req.body;
+
     if (!userId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
     if (!mongoose.Types.ObjectId.isValid(plantId))
       return res
         .status(400)
         .json({ success: false, message: "Invalid plant ID" });
+
     const existingPlant = await plantService.getPlantById(
       new mongoose.Types.ObjectId(plantId)
     );
@@ -182,6 +196,7 @@ export const updatePlant = async (req: Request, res: Response) => {
       return res
         .status(404)
         .json({ success: false, message: "Plant not found" });
+
     // Kiểm tra quyền truy cập location qua plant
     const location = await locationService.getLocationById(
       existingPlant.locationId
@@ -191,6 +206,7 @@ export const updatePlant = async (req: Request, res: Response) => {
         success: false,
         message: "Forbidden: You do not have access to this plant",
       });
+
     const updateData: any = {};
     if (name) updateData.name = name;
     if (status) updateData.status = status;
@@ -198,6 +214,28 @@ export const updatePlant = async (req: Request, res: Response) => {
     if (address !== undefined) updateData.address = address;
     if (plantingDate !== undefined)
       updateData.plantingDate = plantingDate ? new Date(plantingDate) : null;
+
+    // Xử lý harvest data
+    if (status === "Đã thu hoạch") {
+      updateData.harvestDate = new Date();
+
+      if (yieldAmount || yieldUnit) {
+        updateData.yield = {
+          amount: yieldAmount
+            ? parseFloat(yieldAmount)
+            : existingPlant.yield?.amount,
+          unit: yieldUnit || existingPlant.yield?.unit || "kg",
+        };
+      }
+
+      if (qualityRating || qualityDescription) {
+        updateData.quality = {
+          rating: qualityRating || existingPlant.quality?.rating || "Tốt",
+          description: qualityDescription || existingPlant.quality?.description,
+        };
+      }
+    }
+
     // Xử lý cập nhật ảnh nếu có
     if (removeImage === "true" || removeImage === true) {
       if (existingPlant.img && existingPlant.img !== "") {
@@ -228,15 +266,19 @@ export const updatePlant = async (req: Request, res: Response) => {
       }
       updateData.img = `/uploads/plants/${req.file.filename}`;
     }
+
     if (Object.keys(updateData).length === 0)
       return res
         .status(400)
         .json({ success: false, message: "No data to update" });
+
     updateData.updated_at = new Date();
+
     const updatedPlant = await plantService.updatePlant(
       new mongoose.Types.ObjectId(plantId),
       updateData
     );
+
     return res.status(200).json({
       success: true,
       message: "Plant updated successfully",
@@ -249,6 +291,103 @@ export const updatePlant = async (req: Request, res: Response) => {
         error instanceof Error
           ? error.message
           : "An error occurred while updating plant",
+    });
+  }
+};
+
+// Thêm endpoint mới để lấy cây đã thu hoạch
+export const getHarvestedPlantsByLocation = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const userId = req.user?.id;
+    const { locationId } = req.params;
+
+    if (!userId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    if (!mongoose.Types.ObjectId.isValid(locationId))
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid location ID" });
+
+    // Kiểm tra quyền truy cập location
+    const location = await locationService.getLocationById(
+      new mongoose.Types.ObjectId(locationId)
+    );
+    if (!location)
+      return res
+        .status(404)
+        .json({ success: false, message: "Location not found" });
+    if (location.userId.toString() !== userId)
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You do not have access to this location",
+      });
+
+    // Phân trang
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const filter: any = {};
+    if (req.query.search)
+      filter.name = { $regex: req.query.search, $options: "i" };
+
+    const result = await plantService.getPlantsByLocationId(
+      new mongoose.Types.ObjectId(locationId),
+      page,
+      limit,
+      filter,
+      true // harvested = true
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Harvested plants retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "An error occurred while getting harvested plants",
+    });
+  }
+};
+
+// Thêm endpoint lấy tất cả cây đã thu hoạch của user
+export const getHarvestedPlantsByUser = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const filter: any = { status: "Đã thu hoạch" };
+    if (req.query.search)
+      filter.name = { $regex: req.query.search, $options: "i" };
+
+    const result = await plantService.getPlantsByUserId(
+      new mongoose.Types.ObjectId(userId),
+      page,
+      limit,
+      filter
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Harvested plants of user retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "An error occurred while getting user's harvested plants",
     });
   }
 };
