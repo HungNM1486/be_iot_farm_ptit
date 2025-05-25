@@ -15,8 +15,9 @@ import notificationRouter from "./routes/notification.routes";
 import careTaskRouter from "./routes/caretask.routes";
 import http from "http";
 import { Server } from "socket.io";
-import * as plantController from "./controllers/plant.controller";
-import { authenticate } from "./middleware/auth.middleware";
+import cron from "node-cron";
+import { CareTaskNotificationService } from "./services/careTaskNotification.service";
+
 
 import "./services/mqtt.service";
 
@@ -26,6 +27,18 @@ dotenv.config();
 // Initialize express app
 export const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+
+// Chạy mỗi ngày lúc 8:00 sáng
+// cron.schedule('0 8 * * *', async () => {
+//   console.log('Kiểm tra task sắp đến hạn...');
+//   await CareTaskNotificationService.checkUpcomingTasks();
+// });
+
+// Chạy mỗi ngày lúc 14:45 chiều
+cron.schedule("51 14 * * *", async () => {
+  console.log("Kiểm tra task sắp đến hạn...");
+  await CareTaskNotificationService.checkUpcomingTasks();
+});
 
 // Tạo HTTP server và tích hợp socket.io
 const server = http.createServer(app);

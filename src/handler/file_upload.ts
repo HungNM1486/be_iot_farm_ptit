@@ -5,6 +5,8 @@ import fs from "fs";
 import predictService from "../services/image_predict";
 import IMG4Predict from "../models/img4predict.model";
 import { io } from "../app";
+import Notification from "../models/notification.model";
+import mongoose from "mongoose";
 
 const router = Router();
 
@@ -140,6 +142,37 @@ router.post(
         probability: result.confidence,
         predictionId,
       });
+
+      // Kiểm tra và tạo notification nếu phát hiện bệnh
+      if (!result.className.toLowerCase().includes("healthy")) {
+        try {
+          const notification = new Notification({
+            type: "disease_detected",
+            message: `Phát hiện bệnh: ${result.className} với độ tin cậy ${(
+              result.confidence * 100
+            ).toFixed(1)}%`,
+            locationId: new mongoose.Types.ObjectId(),
+            read: false,
+            created_at: new Date(),
+          });
+
+          const savedNotification = await notification.save();
+
+          // Emit notification qua socket
+          io.emit("new_notification", {
+            id: savedNotification._id,
+            type: savedNotification.type,
+            message: savedNotification.message,
+            createdAt: savedNotification.created_at,
+            read: false,
+          });
+
+          console.log(`Đã tạo thông báo bệnh: ${result.className}`);
+        } catch (notifError) {
+          console.error("Lỗi tạo notification:", notifError);
+        }
+      }
+
       res.json({
         success: true,
         imageUrl,
