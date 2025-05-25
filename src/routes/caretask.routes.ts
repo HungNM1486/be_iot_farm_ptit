@@ -22,7 +22,8 @@ router.put("/:taskId", careTaskController.updateCareTask);
 // Xóa caretask
 router.delete("/:taskId", careTaskController.deleteCareTask);
 
-router.get("/check-reminders", authenticate, async (req, res) => {
+// Route để kiểm tra nhắc nhở - KHÔNG cần authenticate vì được gọi bởi cron job
+router.get("/check-reminders", async (req, res) => {
   try {
     await CareTaskNotificationService.checkUpcomingTasks();
     res.json({ success: true, message: "Đã kiểm tra nhắc nhở" });

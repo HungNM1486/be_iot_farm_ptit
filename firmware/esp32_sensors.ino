@@ -13,9 +13,9 @@ const int mqtt_port = 1883;
 const char* mqtt_user = "admin";           // Username MQTT
 const char* mqtt_password = "admin";       // Password MQTT
 const char* deviceId = "ESP32_SENSORS_001"; // ID thiết bị, đổi theo nhu cầu
-const char* topic_data = "iot/sensors/khu-a-285/data";
-const char* topic_status = "iot/sensors/khu-a-285/status";
-const char* topic_config = "iot/sensors/khu-a-285/config";
+const char* topic_data = "iot/sensors/data";
+const char* topic_status = "iot/sensors/status";
+const char* topic_config = "iot/sensors/config";
 
 // =============== CẤU HÌNH CẢM BIẾN =============
 #define DHTPIN 4          // Chân kết nối DHT11
@@ -197,14 +197,43 @@ float readMQ02() {
 }
 
 // Hàm đọc giá trị cảm biến ánh sáng
+// Hàm đọc giá trị cảm biến ánh sáng - SỬA LẠI
 float readLightSensor() {
   int sensorValue = analogRead(LIGHT_SENSOR_PIN);
   
-  // Chuyển đổi giá trị analog sang cường độ ánh sáng (lux)
-  // Công thức này cần được hiệu chỉnh theo cảm biến cụ thể của bạn
-  float lightIntensity = map(sensorValue, 0, 4095, 10000, 0); // Đảo ngược vì quang trở giảm điện trở khi có ánh sáng
+  // Chuyển đổi sang voltage (0-3.3V)
+  float voltage = sensorValue * (3.3 / 4095.0);
   
-  return lightIntensity;
+  // Công thức cho quang trở thông thường (cần hiệu chuẩn theo cảm biến cụ thể)
+  // Giả sử: voltage cao = ít ánh sáng, voltage thấp = nhiều ánh sáng
+  float lux;
+  
+  if (voltage > 2.5) {
+    // Tối (0-50 lux)
+    lux = map(voltage * 1000, 2500, 3300, 50, 0);
+  } else if (voltage > 1.5) {
+    // Ánh sáng yếu (50-200 lux)  
+    lux = map(voltage * 1000, 1500, 2500, 200, 50);
+  } else if (voltage > 0.8) {
+    // Ánh sáng vừa (200-1000 lux)
+    lux = map(voltage * 1000, 800, 1500, 1000, 200);
+  } else {
+    // Ánh sáng mạnh (1000+ lux)
+    lux = map(voltage * 1000, 0, 800, 5000, 1000);
+  }
+  
+  // Đảm bảo giá trị >= 0
+  if (lux < 0) lux = 0;
+  
+  // Debug output
+  Serial.print("Light - Raw: ");
+  Serial.print(sensorValue);
+  Serial.print(", Voltage: ");
+  Serial.print(voltage);
+  Serial.print("V, Lux: ");
+  Serial.println(lux);
+  
+  return lux;
 }
 
 void setup() {

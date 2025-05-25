@@ -18,7 +18,6 @@ import { Server } from "socket.io";
 import cron from "node-cron";
 import { CareTaskNotificationService } from "./services/careTaskNotification.service";
 
-
 import "./services/mqtt.service";
 
 // Load environment variables
@@ -28,16 +27,26 @@ dotenv.config();
 export const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
-// Chạy mỗi ngày lúc 8:00 sáng
-// cron.schedule('0 8 * * *', async () => {
-//   console.log('Kiểm tra task sắp đến hạn...');
-//   await CareTaskNotificationService.checkUpcomingTasks();
-// });
+// Chạy mỗi ngày lúc 8:00 sáng để kiểm tra task sắp đến hạn
+cron.schedule("0 8 * * *", async () => {
+  console.log("Kiểm tra care task sắp đến hạn lúc 8:00 AM...");
+  try {
+    await CareTaskNotificationService.checkUpcomingTasks();
+    console.log("Đã hoàn thành kiểm tra care task reminders");
+  } catch (error) {
+    console.error("Lỗi khi kiểm tra care task reminders:", error);
+  }
+});
 
-// Chạy mỗi ngày lúc 14:45 chiều
-cron.schedule("51 14 * * *", async () => {
-  console.log("Kiểm tra task sắp đến hạn...");
-  await CareTaskNotificationService.checkUpcomingTasks();
+// Chạy thêm lúc 18:00 chiều để nhắc nhở lần nữa
+cron.schedule("0 18 * * *", async () => {
+  console.log("Kiểm tra care task sắp đến hạn lúc 6:00 PM...");
+  try {
+    await CareTaskNotificationService.checkUpcomingTasks();
+    console.log("Đã hoàn thành kiểm tra care task reminders");
+  } catch (error) {
+    console.error("Lỗi khi kiểm tra care task reminders:", error);
+  }
 });
 
 // Tạo HTTP server và tích hợp socket.io
@@ -90,6 +99,8 @@ const initModel = async () => {
 // Start server
 server.listen(port, () => {
   console.log(`Server started at http://localhost:${port}`);
+  console.log("Cron jobs initialized:");
+  console.log("- Care task reminders: 8:00 AM and 6:00 PM daily");
   // Initialize model after server starts
   initModel();
 });
