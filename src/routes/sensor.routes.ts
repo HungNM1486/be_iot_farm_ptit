@@ -1,27 +1,18 @@
-// src/routes/sensor.routes.ts
 import { Router } from "express";
 import * as sensorController from "../controllers/sensor.controller";
 import { authenticate } from "../middleware/auth.middleware";
 
 const router = Router();
 
-// Ngưỡng cảnh báo
-router.get(
-  "/alert-settings/:locationId",
-  authenticate,
-  sensorController.getAlertSettings
-);
+// Global alert settings (không cần authentication cho đơn giản)
+router.get("/alert-settings/global", sensorController.getGlobalAlertSettings);
 router.put(
-  "/alert-settings/:locationId",
+  "/alert-settings/global",
   authenticate,
-  sensorController.updateAlertSettings
+  sensorController.updateGlobalAlertSettings
 );
 
 // Gửi config xuống ESP32
-router.post(
-  "/send-config/:location_code",
-  authenticate,
-  sensorController.sendConfigToEsp32
-);
+router.post("/send-config", authenticate, sensorController.sendConfigToEsp32);
 
 export default router;

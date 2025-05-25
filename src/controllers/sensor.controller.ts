@@ -1,66 +1,94 @@
 import { Request, Response } from "express";
-import AlertSettings from "../models/alertSetting.model";
-import { sendSensorConfig } from "../services/mqtt.service";
 
-// Lấy ngưỡng cảnh báo của location
-export const getAlertSettings = async (req: Request, res: Response) => {
-  try {
-    const { locationId } = req.params;
-    const settings = await AlertSettings.findOne({ locationId });
-    if (!settings) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy ngưỡng cảnh báo cho vị trí này",
-      });
-    }
-    res.status(200).json({ success: true, data: settings });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message:
-        error instanceof Error ? error.message : "Lỗi khi lấy ngưỡng cảnh báo",
-    });
-  }
+// Cấu hình cứng cho 1 ESP32
+const GLOBAL_LOCATION_CODE = "khu-a-285"; // Hardcode location code
+let globalAlertSettings = {
+  temperature_min: 15,
+  temperature_max: 35,
+  humidity_min: 30,
+  humidity_max: 80,
+  light_intensity_min: 300,
+  light_intensity_max: 800,
+  gas_min: 0,
+  gas_max: 1000,
 };
 
-// Cập nhật ngưỡng cảnh báo của location
-export const updateAlertSettings = async (req: Request, res: Response) => {
+// Lấy cài đặt global
+export const getGlobalAlertSettings = async (req: Request, res: Response) => {
   try {
-    const { locationId } = req.params;
-    const update = req.body;
-    let settings = await AlertSettings.findOne({ locationId });
-    if (!settings) {
-      settings = new AlertSettings({ locationId, ...update });
-    } else {
-      Object.assign(settings, update);
-    }
-    await settings.save();
     res.status(200).json({
       success: true,
-      data: settings,
-      message: "Đã cập nhật ngưỡng cảnh báo",
+      data: globalAlertSettings,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Lỗi khi lấy cài đặt",
+    });
+  }
+};
+
+// Cập nhật cài đặt global
+export const updateGlobalAlertSettings = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const {
+      temperature_min,
+      temperature_max,
+      humidity_min,
+      humidity_max,
+      light_intensity_min,
+      light_intensity_max,
+      gas_min,
+      gas_max,
+    } = req.body;
+
+    // Cập nhật cài đặt
+    globalAlertSettings = {
+      temperature_min: temperature_min ?? globalAlertSettings.temperature_min,
+      temperature_max: temperature_max ?? globalAlertSettings.temperature_max,
+      humidity_min: humidity_min ?? globalAlertSettings.humidity_min,
+      humidity_max: humidity_max ?? globalAlertSettings.humidity_max,
+      light_intensity_min:
+        light_intensity_min ?? globalAlertSettings.light_intensity_min,
+      light_intensity_max:
+        light_intensity_max ?? globalAlertSettings.light_intensity_max,
+      gas_min: gas_min ?? globalAlertSettings.gas_min,
+      gas_max: gas_max ?? globalAlertSettings.gas_max,
+    };
+
+    console.log("Updated global alert settings:", globalAlertSettings);
+
+    res.status(200).json({
+      success: true,
+      data: globalAlertSettings,
+      message: "Đã cập nhật cài đặt cảnh báo",
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message:
-        error instanceof Error
-          ? error.message
-          : "Lỗi khi cập nhật ngưỡng cảnh báo",
+        error instanceof Error ? error.message : "Lỗi khi cập nhật cài đặt",
     });
   }
 };
 
-// Gửi config xuống ESP32 qua MQTT
-type SensorConfig = { interval?: number; calibrate_mq02?: boolean };
+// Gửi config xuống ESP32
 export const sendConfigToEsp32 = async (req: Request, res: Response) => {
   try {
-    const { location_code } = req.params;
-    const config: SensorConfig = req.body;
-    sendSensorConfig(location_code, config);
-    res
-      .status(200)
-      .json({ success: true, message: "Đã gửi config tới ESP32", config });
+    const config = req.body;
+
+    // Import MQTT service để gửi config
+    const { sendSensorConfig } = await import("../services/mqtt.service");
+    sendSensorConfig(GLOBAL_LOCATION_CODE, config);
+
+    res.status(200).json({
+      success: true,
+      message: "Đã gửi config tới ESP32",
+      config,
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -68,3 +96,6 @@ export const sendConfigToEsp32 = async (req: Request, res: Response) => {
     });
   }
 };
+
+// Export cài đặt để sử dụng trong MQTT service
+export const getCurrentAlertSettings = () => globalAlertSettings;

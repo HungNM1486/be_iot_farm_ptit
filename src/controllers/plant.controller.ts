@@ -10,18 +10,18 @@ export const createPlant = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     const { locationId } = req.params;
-    const { name, img, status, note, startdate, plantingDate, address } =
-      req.body;
+    const { name, status, note, startdate, plantingDate, address } = req.body;
 
     console.log("req.body:", req.body);
     console.log("req.params:", req.params);
+    console.log("req.file:", req.file); // Debug file upload
 
     if (!userId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
     if (!mongoose.Types.ObjectId.isValid(locationId))
       return res
         .status(400)
-        .json({ success: false, message: "Invali  d location ID" });
+        .json({ success: false, message: "Invalid location ID" });
     if (!name)
       return res
         .status(400)
@@ -41,10 +41,17 @@ export const createPlant = async (req: Request, res: Response) => {
         message: "Forbidden: You do not have access to this location",
       });
 
+    // Xử lý ảnh upload
+    let imgPath = "";
+    if (req.file) {
+      imgPath = `/uploads/plants/${req.file.filename}`;
+      console.log("Image uploaded to:", imgPath);
+    }
+
     // Tạo cây trồng mới
     const plant = await plantService.createPlant({
       name,
-      img,
+      img: imgPath, // Sử dụng đường dẫn ảnh đã upload
       address,
       status: status || "Đang tốt",
       note,
@@ -59,7 +66,7 @@ export const createPlant = async (req: Request, res: Response) => {
       data: plant,
     });
   } catch (error) {
-    console.error(error); // Thêm dòng này
+    console.error(error);
     return res.status(500).json({
       success: false,
       message:
@@ -168,19 +175,9 @@ export const updatePlant = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     const { plantId } = req.params;
-    const {
-      name,
-      status,
-      note,
-      removeImage,
-      plantingDate,
-      address,
-      // Thêm các fields cho harvest
-      "yield[amount]": yieldAmount,
-      "yield[unit]": yieldUnit,
-      "quality[rating]": qualityRating,
-      "quality[description]": qualityDescription,
-    } = req.body;
+    const { name, status, note, removeImage, plantingDate, address } = req.body;
+
+    console.log("req.body:", req.body); // Debug
 
     if (!userId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -215,24 +212,30 @@ export const updatePlant = async (req: Request, res: Response) => {
     if (plantingDate !== undefined)
       updateData.plantingDate = plantingDate ? new Date(plantingDate) : null;
 
-    // Xử lý harvest data
+    // Xử lý harvest date khi status = "Đã thu hoạch"
     if (status === "Đã thu hoạch") {
       updateData.harvestDate = new Date();
+    }
 
-      if (yieldAmount || yieldUnit) {
-        updateData.yield = {
-          amount: yieldAmount
-            ? parseFloat(yieldAmount)
-            : existingPlant.yield?.amount,
-          unit: yieldUnit || existingPlant.yield?.unit || "kg",
-        };
+    // Xử lý yield data
+    if (req.body.yield) {
+      updateData.yield = {};
+      if (req.body.yield.amount) {
+        updateData.yield.amount = parseFloat(req.body.yield.amount);
       }
+      if (req.body.yield.unit) {
+        updateData.yield.unit = req.body.yield.unit;
+      }
+    }
 
-      if (qualityRating || qualityDescription) {
-        updateData.quality = {
-          rating: qualityRating || existingPlant.quality?.rating || "Tốt",
-          description: qualityDescription || existingPlant.quality?.description,
-        };
+    // Xử lý quality data
+    if (req.body.quality) {
+      updateData.quality = {};
+      if (req.body.quality.rating) {
+        updateData.quality.rating = req.body.quality.rating;
+      }
+      if (req.body.quality.description) {
+        updateData.quality.description = req.body.quality.description;
       }
     }
 
@@ -274,6 +277,8 @@ export const updatePlant = async (req: Request, res: Response) => {
 
     updateData.updated_at = new Date();
 
+    console.log("updateData:", updateData); // Debug
+
     const updatedPlant = await plantService.updatePlant(
       new mongoose.Types.ObjectId(plantId),
       updateData
@@ -285,6 +290,7 @@ export const updatePlant = async (req: Request, res: Response) => {
       data: updatedPlant,
     });
   } catch (error) {
+    console.error("Update plant error:", error);
     return res.status(500).json({
       success: false,
       message:
